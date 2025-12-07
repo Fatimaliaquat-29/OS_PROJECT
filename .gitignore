@@ -1,0 +1,38 @@
+# Compiled object files
+*.o
+*.obj
+
+# Executable files
+*.exe
+*.out
+*.app
+
+# Libraries
+*.a
+*.lib
+*.so
+*.dylib
+*.dll
+
+# Debug files
+*.dSYM/
+*.su
+*.gch
+*.pcm
+
+# Dependency files
+*.d
+*.dep
+
+# IDE and Editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Build directories
+build/
+dist/
+bin/
