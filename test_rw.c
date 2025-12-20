@@ -1,59 +1,98 @@
 #include <stdio.h>
 #include <unistd.h>
 #include <sys/syscall.h>
+#include <sys/wait.h>
 #include <errno.h>
 #include <string.h>
+#include <stdlib.h>
 
 #define SYS_RW_READ_LOCK 471
 #define SYS_RW_READ_UNLOCK 472
 #define SYS_RW_WRITE_LOCK 473
 #define SYS_RW_WRITE_UNLOCK 474
 
-int main()
+#define NUM_USERS 6 // Total processes (readers + writers)
+
+void reader_process(int id)
 {
     long ret;
 
-    // Reader acquires lock
-    printf("Reader trying to acquire lock\n");
+    printf("[Reader %d] Trying to acquire read lock\n", id);
     ret = syscall(SYS_RW_READ_LOCK);
     if (ret == -1)
     {
-        printf("Error acquiring read lock: %s\n", strerror(errno));
-        return 1;
+        printf("[Reader %d] Error: %s\n", id, strerror(errno));
+        exit(1);
     }
-    printf("Reader acquired lock\n");
 
-    sleep(2); // Simulate reading
+    printf("[Reader %d] Acquired read lock\n", id);
+    sleep(2);
 
-    // Reader releases lock
     ret = syscall(SYS_RW_READ_UNLOCK);
     if (ret == -1)
     {
-        printf("Error releasing read lock: %s\n", strerror(errno));
-        return 1;
+        printf("[Reader %d] Error unlocking: %s\n", id, strerror(errno));
+        exit(1);
     }
-    printf("Reader released lock\n");
 
-    // Writer acquires lock
-    printf("Writer trying to acquire lock\n");
+    printf("[Reader %d] Released read lock\n", id);
+    exit(0);
+}
+
+void writer_process(int id)
+{
+    long ret;
+
+    printf("[Writer %d] Trying to acquire write lock\n", id);
     ret = syscall(SYS_RW_WRITE_LOCK);
     if (ret == -1)
     {
-        printf("Error acquiring write lock: %s\n", strerror(errno));
-        return 1;
+        printf("[Writer %d] Error: %s\n", id, strerror(errno));
+        exit(1);
     }
-    printf("Writer acquired lock\n");
 
-    sleep(2); // Simulate writing
+    printf("[Writer %d] Acquired write lock\n", id);
+    sleep(3);
 
-    // Writer releases lock
     ret = syscall(SYS_RW_WRITE_UNLOCK);
     if (ret == -1)
     {
-        printf("Error releasing write lock: %s\n", strerror(errno));
-        return 1;
+        printf("[Writer %d] Error unlocking: %s\n", id, strerror(errno));
+        exit(1);
     }
-    printf("Writer released lock\n");
 
+    printf("[Writer %d] Released write lock\n", id);
+    exit(0);
+}
+
+int main()
+{
+    pid_t pid;
+
+    for (int i = 0; i < NUM_USERS; i++)
+    {
+        pid = fork();
+
+        if (pid < 0)
+        {
+            perror("fork failed");
+            exit(1);
+        }
+
+        if (pid == 0)
+        {
+            // Child process
+            if (i % 2 == 0)
+                reader_process(i);
+            else
+                writer_process(i);
+        }
+    }
+
+    // Parent waits for all children
+    for (int i = 0; i < NUM_USERS; i++)
+        wait(NULL);
+
+    printf("All users finished execution\n");
     return 0;
 }
